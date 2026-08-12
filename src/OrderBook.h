@@ -3,6 +3,7 @@
 #include <list>
 #include <map>
 #include <cstdint>
+#include <functional>
 #include "Order.h"
 
 class OrderBook {
@@ -10,7 +11,7 @@ class OrderBook {
 
         uint64_t nextOrderId = 001;
 
-        std::map<int, std::list<Order>> bids; // Key: price, Value: list of orders at that price
+        std::map<int, std::list<Order>, std::greater<int>> bids; // Key: price, Value: list of orders at that price
         std::map<int, std::list<Order>> asks; // Key: price, Value: list of orders at that price
 
         std::unordered_map<uint64_t, std::list<Order>::iterator> bidOrderLookup; // Key: order ID, Value: iterator to the order in the bids list
@@ -18,5 +19,6 @@ class OrderBook {
 
     public:
         uint64_t addOrder(Order order);
+        bool cancelOrder(uint64_t orderId);
 };
 

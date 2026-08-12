@@ -16,6 +16,21 @@ int main() {
               << " " << o2.quantity << " @ " << o2.price << "\n";          
     
     OrderBook ob;
+
+    uint64_t id1 = ob.addOrder(o);
+    std::cout << "Added order, assigned id: " << id1 << "\n";
+
+    uint64_t id2 = ob.addOrder(o2);
+    std::cout << "Added order, assigned id: " << id2 << "\n";
+
+    bool result1 = ob.cancelOrder(id1);
+    std::cout << "Cancel result: " << (result1 ? "true" : "false") << "\n";
+
+    bool result3 = ob.cancelOrder(id2);
+    std::cout << "Cancel result: " << (result3 ? "true" : "false") << "\n";
+
+    bool result2 = ob.cancelOrder(9999);  // never assigned, should fail
+    std::cout << "Cancel result: " << (result2 ? "true" : "false") << "\n";
     
     return 0;
               
