@@ -1,6 +1,7 @@
 #include <iostream>
 #include "Order.h"
 #include "OrderBook.h"
+#include "CsvParser.h"
 
 int main() {
     Order o {1, Side::BUY, OrderType::LIMIT, 10150, 100};
@@ -32,6 +33,12 @@ int main() {
     bool result2 = ob.cancelOrder(9999);  // never assigned, should fail
     std::cout << "Cancel result: " << (result2 ? "true" : "false") << "\n";
     
+
+    CsvParser parser;
+    parser.parseFile("../data/orders.csv", ob);
+    ob.printOrderBook();
     return 0;
+
+
               
 }
