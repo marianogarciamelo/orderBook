@@ -14,7 +14,7 @@ int main() {
     
     std::mt19937 rng(42); // Fixed seed for reproducibility
     std::uniform_int_distribution<int> sideDist(0, 1); // 0 for BUY, 1 for SELL
-    std::uniform_int_distribution<int> priceDist(10000, 99999); // Price range
+    std::uniform_int_distribution<int> priceDist(10000, 15000); // Price range
     std::uniform_int_distribution<int> quantityDist(1, 1000); // Quantity
 
     for (int i = 0; i < numOrders; ++i) {

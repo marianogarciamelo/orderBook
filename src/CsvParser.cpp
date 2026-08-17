@@ -42,14 +42,17 @@ void CsvParser::parseFile(const std::string& filepath, OrderBook& orderBook) {
             newOrder.price = std::stoi(fields[4]);
             newOrder.quantity = std::stoi(fields[5]);
 
-            uint64_t internalId = orderBook.addOrder(newOrder);
-            externalToInternalId[externalId] = internalId;
+            ExecutionResult result = orderBook.executeOrder(newOrder);
+
+            if (result.restedInBook) {
+                externalToInternalId[externalId] = result.restingOrderId;
+            }
 
         } else if (action == "CANCEL") {
             uint64_t internalId = externalToInternalId[externalId];
             orderBook.cancelOrder(internalId);
         
-        } else if (action == "EXECUTE") {
+        }  /* else if (action == "EXECUTE") {
             Order newOrder;
             newOrder.side = (fields[3] == "BUY") ? Side::BUY : Side::SELL;
             newOrder.price = std::stoi(fields[4]);
@@ -60,6 +63,6 @@ void CsvParser::parseFile(const std::string& filepath, OrderBook& orderBook) {
             if (result.restedInBook) {
                 externalToInternalId[externalId] = result.restingOrderId;
             }
-        }
+        } */
     }
 }
