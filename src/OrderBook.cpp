@@ -53,6 +53,7 @@ bool OrderBook::cancelOrder(uint64_t orderId) {
         return false; // Order ID not found
     }
     std::cout << "Order " << orderId << " canceled successfully.\n";
+    totalCancelled++; // Increment the total canceled orders
     return true; // Order canceled successfully
 }
 
@@ -60,6 +61,8 @@ ExecutionResult OrderBook::executeOrder(Order order) {
     uint64_t originalQuantity = order.quantity;
     bool restedInBook = false;
     uint64_t newID = 0; // Initialize newID to 0
+    totalOrdersProcessed++; // Increment the total orders processed
+    totalVolumeSubmitted += order.quantity; // Increment the total volume submitted
 
     std::cout << "Executing order: " << (order.side == Side::BUY ? "BUY" : "SELL")
               << " " << order.quantity << " @ " << order.price << "\n";
@@ -131,6 +134,12 @@ ExecutionResult OrderBook::executeOrder(Order order) {
         }
     }
 
+    uint64_t filled = originalQuantity - order.quantity;
+    totalFilled += filled; // Increment the total filled quantity
+    if (restedInBook) {
+        totalRested++;
+    }
+
     return ExecutionResult{
         originalQuantity - order.quantity, //filled quantity
         order.quantity, // remaining quantity
@@ -155,5 +164,24 @@ void OrderBook::printOrderBook() const {
         for (const auto& order : orders) {
             std::cout << "ID: " << order.id << ", Quantity: " << order.quantity << ", Price: " << price << "\n";
         }
+    }
+}
+
+void OrderBook::printStatistics() const {
+    std::cout << "\n=== Order Book Statistics ===\n";
+    std::cout << "Total Orders Processed: " << totalOrdersProcessed << "\n";
+    std::cout << "Total Volume / Quantity Submitted: " << totalVolumeSubmitted << "\n";
+    std::cout << "Total Filled Quantity: " << totalFilled << "\n";
+    std::cout << "Total Cancelled Orders: " << totalCancelled << "\n";
+    std::cout << "Total Rested Orders: " << totalRested << "\n";
+
+    if (totalOrdersProcessed > 0) {
+        double restRate = static_cast<double>(totalRested) / totalOrdersProcessed * 100.0;
+        std::cout << "Rest Rate: " << restRate << "%\n";
+    }
+
+    if (totalVolumeSubmitted > 0) {
+        double fillRate = static_cast<double>(totalFilled) / totalVolumeSubmitted * 100.0;
+        std::cout << "Fill Rate: " << fillRate << "%\n";
     }
 }

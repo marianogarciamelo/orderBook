@@ -36,7 +36,8 @@ int main() {
 
     CsvParser parser;
     parser.parseFile("../data/orders.csv", ob);
-    ob.printOrderBook();
+    //ob.printOrderBook();
+    ob.printStatistics();
     return 0;
 
 
