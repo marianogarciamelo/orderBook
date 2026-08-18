@@ -38,15 +38,13 @@ int main() {
     CsvParser parser;
     //parser.parseFile("../data/orders.csv", ob);
     //ob.printOrderBook();
-    ob.printStatistics();
     std::vector<CsvEvent> events;
-    parser.parseFiletoVector("../data/orders.csv", events);
+    parser.parseFiletoVector(std::string(PROJECT_SOURCE_DIR) + "/data/orders.csv", events);
     std::vector<long long> latenciesNs;              // <-- declared here, starts empty
     parser.processEvents(events, ob, latenciesNs);
+    ob.printStatistics();  // <-- print statistics after processing events
     runBenchmarks(latenciesNs);  // <-- pass the vector to the benchmark function
 
     return 0;
-
-
               
 }

@@ -2,6 +2,9 @@
 #include <algorithm>
 #include <iostream>
 #include <numeric>
+#include <vector>
+#include <iomanip>
+#include <string>
 
 void runBenchmarks(std::vector<long long>& latenciesNs) {
     if (latenciesNs.empty()) {
