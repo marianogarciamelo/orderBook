@@ -11,6 +11,12 @@ enum class OrderType {
     MARKET
 };
 
+enum class ActionType {
+    ADD,
+    CANCEL,
+    EXECUTE
+};
+
 struct Order {
     uint64_t id;
     Side side;

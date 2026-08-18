@@ -2,6 +2,7 @@
 #include "Order.h"
 #include "OrderBook.h"
 #include "CsvParser.h"
+#include "benchmark.h"
 
 int main() {
     Order o {1, Side::BUY, OrderType::LIMIT, 10150, 100};
@@ -35,9 +36,15 @@ int main() {
     
 
     CsvParser parser;
-    parser.parseFile("../data/orders.csv", ob);
+    //parser.parseFile("../data/orders.csv", ob);
     //ob.printOrderBook();
     ob.printStatistics();
+    std::vector<CsvEvent> events;
+    parser.parseFiletoVector("../data/orders.csv", events);
+    std::vector<long long> latenciesNs;              // <-- declared here, starts empty
+    parser.processEvents(events, ob, latenciesNs);
+    runBenchmarks(latenciesNs);  // <-- pass the vector to the benchmark function
+
     return 0;
 
 
