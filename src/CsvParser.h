@@ -12,5 +12,5 @@ class CsvParser {
     public:
         void parseFile(const std::string& filename, OrderBook& orderBook);
         void parseFiletoVector(const std::string& filename, std::vector<CsvEvent>& events);
-        void processEvents(const std::vector<CsvEvent>& events, OrderBook& orderBook, std::vector<long long>& latenciesNs);
+        void processEvents(const std::vector<CsvEvent>& events, OrderBook& orderBook, std::vector<long long>& latenciesNs, std::vector<uint32_t>& matchIterationsCounts);
 };

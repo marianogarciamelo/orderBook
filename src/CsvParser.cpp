@@ -119,7 +119,7 @@ void CsvParser::parseFiletoVector(const std::string& filepath, std::vector<CsvEv
         }
     }
 
-    void CsvParser::processEvents(const std::vector<CsvEvent>& events, OrderBook& orderBook, std::vector<long long>& latenciesNs) {
+    void CsvParser::processEvents(const std::vector<CsvEvent>& events, OrderBook& orderBook, std::vector<long long>& latenciesNs, std::vector<uint32_t>& matchIterationsCounts) {
         std::unordered_map<uint64_t, uint64_t> externalToInternalId;
         for (const auto& event : events) {
             if (event.action == ActionType::ADD) {
@@ -130,6 +130,7 @@ void CsvParser::parseFiletoVector(const std::string& filepath, std::vector<CsvEv
                 latenciesNs.push_back(
                     std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count()
                 );
+                matchIterationsCounts.push_back(result.matchIterations); // Store the number of iterations for this order
 
                 if (result.restedInBook) {
                     externalToInternalId[event.order.id] = result.restingOrderId;

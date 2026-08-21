@@ -3,6 +3,7 @@
 #include "OrderBook.h"
 #include "CsvParser.h"
 #include "benchmark.h"
+#include "PooledList.h"
 
 int main() {
     Order o {1, Side::BUY, OrderType::LIMIT, 10150, 100};
@@ -40,10 +41,12 @@ int main() {
     //ob.printOrderBook();
     std::vector<CsvEvent> events;
     parser.parseFiletoVector(std::string(PROJECT_SOURCE_DIR) + "/data/orders.csv", events);
-    std::vector<long long> latenciesNs;              // <-- declared here, starts empty
-    parser.processEvents(events, ob, latenciesNs);
+    std::vector<long long> latenciesNs;
+    std::vector<uint32_t> matchIterationCounts;              // <-- declared here, starts empty
+    parser.processEvents(events, ob, latenciesNs, matchIterationCounts);  // <-- pass the vector to processEvents
     ob.printStatistics();  // <-- print statistics after processing events
     runBenchmarks(latenciesNs);  // <-- pass the vector to the benchmark function
+    runMatchIterationStats(matchIterationCounts, latenciesNs);  // <-- pass the vector to the match iteration stats function
 
     return 0;
               

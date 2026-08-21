@@ -1,4 +1,5 @@
 #include "OrderBook.h"
+#include "PooledList.h"
 #include <iterator>
 #include <iostream>
 
@@ -6,18 +7,19 @@ uint64_t OrderBook::addOrder(Order order) { // :: reads as "OrderBook::addOrder"
         order.id = nextOrderId++;
 
         if (order.side == Side::BUY) {
-            bids[order.price].push_back(order);
-            bidOrderLookup[order.id] = std::prev(bids[order.price].end()); // Store the iterator to the newly added order in the bidOrderLookup map
+            bids.try_emplace(order.price, nodePool); //try_emplace's actual rule (for any map) is: "first argument is always the key. Every argument after that gets forwarded, in order, straight into the value type's constructor, exactly as if you'd called it yourself."
+            Node* newNode = bids.at(order.price).push_back(order);
+            bidOrderLookup[order.id] = newNode; 
 
         } else if (order.side == Side::SELL) {
-            asks[order.price].push_back(order);
-            askOrderLookup[order.id] = std::prev(asks[order.price].end()); // Store the iterator to the newly added order in the askOrderLookup map
-
+            asks.try_emplace(order.price, nodePool);
+            Node* newNode = asks.at(order.price).push_back(order);
+            askOrderLookup[order.id] = newNode;
         }
 
-        std::cout << "Order " << order.id << " added: "
-              << (order.side == Side::BUY ? "BUY" : "SELL")
-              << " " << order.quantity << " @ " << order.price << "\n";
+        //std::cout << "Order " << order.id << " added: "
+              //<< (order.side == Side::BUY ? "BUY" : "SELL")
+              //<< " " << order.quantity << " @ " << order.price << "\n";
 
         return order.id;
 
@@ -29,30 +31,30 @@ bool OrderBook::cancelOrder(uint64_t orderId) {
     // was inserted back in addOrder. We must read this BEFORE erasing, since
     // erase(it) invalidates the iterator afterward.
     if (bidOrderLookup.count(orderId) > 0) {
-        auto it = bidOrderLookup[orderId];
-        int price = it->price; // dereference the iterator to get the order and then access its price
-        bids[price].erase(it);
+        Node* node = bidOrderLookup[orderId];
+        int price = node->order.price;
+        bids.at(price).erase(node);
         bidOrderLookup.erase(orderId);
 
-        if (bids[price].empty()) {
+        if (bids.at(price).empty()) {
             bids.erase(price); // Remove the price level if there are no more orders at that price
         }
 
     } else if (askOrderLookup.count(orderId) > 0) {
-        auto it = askOrderLookup[orderId];
-        int price = it->price; // dereference the iterator to get the order and then access its price
-        asks[price].erase(it);
+        Node* node = askOrderLookup[orderId];
+        int price = node->order.price;
+        asks.at(price).erase(node);
         askOrderLookup.erase(orderId);
 
-        if (asks[price].empty()) {
+        if (asks.at(price).empty()) {
             asks.erase(price); // Remove the price level if there are no more orders at that price
         }
 
     } else {
-        std::cout << "Order ID " << orderId << " not found.\n";
+        //std::cout << "Order ID " << orderId << " not found.\n";
         return false; // Order ID not found
     }
-    std::cout << "Order " << orderId << " canceled successfully.\n";
+    //std::cout << "Order " << orderId << " canceled successfully.\n";
     totalCancelled++; // Increment the total canceled orders
     return true; // Order canceled successfully
 }
@@ -61,11 +63,12 @@ ExecutionResult OrderBook::executeOrder(Order order) {
     uint64_t originalQuantity = order.quantity;
     bool restedInBook = false;
     uint64_t newID = 0; // Initialize newID to 0
+    uint32_t matchIterations = 0; // Initialize match iterations for this order
     totalOrdersProcessed++; // Increment the total orders processed
     totalVolumeSubmitted += order.quantity; // Increment the total volume submitted
 
-    std::cout << "Executing order: " << (order.side == Side::BUY ? "BUY" : "SELL")
-              << " " << order.quantity << " @ " << order.price << "\n";
+    //std::cout << "Executing order: " << (order.side == Side::BUY ? "BUY" : "SELL")
+              //<< " " << order.quantity << " @ " << order.price << "\n";
 
     if (order.side == Side::BUY) {
         while (order.quantity > 0 && !asks.empty()) {
@@ -74,7 +77,9 @@ ExecutionResult OrderBook::executeOrder(Order order) {
             auto& bestAskOrders = bestAskIt->second; //pointer to the real list of orders so we can modify it directly
 
             while (order.quantity > 0 && !bestAskOrders.empty()){
-                Order& restingOrder = bestAskOrders.front(); // Get the first order in the list
+                Node* restingNode = bestAskOrders.front();
+                Order& restingOrder = restingNode->order; // Get the first order in the list
+                matchIterations++; // Increment the match iterations for each match attempt
 
                 if (order.quantity < restingOrder.quantity) {
                     restingOrder.quantity -= order.quantity;
@@ -82,7 +87,7 @@ ExecutionResult OrderBook::executeOrder(Order order) {
                 } else {
                     order.quantity -= restingOrder.quantity;
                     askOrderLookup.erase(restingOrder.id); // Remove from lookup
-                    bestAskOrders.pop_front(); // Remove the order from the list
+                    bestAskOrders.erase(restingNode); // Remove the order from the list
                 }
             }
 
@@ -91,12 +96,12 @@ ExecutionResult OrderBook::executeOrder(Order order) {
             }
         }
         if (order.quantity > 0) {
-            std::cout << "Not enough liquidity to execute the order. Setting up a bid for the remaining quantity of " << order.quantity << " shares @ " << order.price << ".\n";
+            //std::cout << "Not enough liquidity to execute the order. Setting up a bid for the remaining quantity of " << order.quantity << " shares @ " << order.price << ".\n";
             newID = addOrder(order); // Not enough liquidity to execute the order
             restedInBook = true;
         }  else {
-            std::cout << "Order fully filled: " << (order.side == Side::BUY ? "BUY" : "SELL")
-               << " " << originalQuantity << " @ " << order.price << ".\n";
+            //std::cout << "Order fully filled: " << (order.side == Side::BUY ? "BUY" : "SELL")
+               //<< " " << originalQuantity << " @ " << order.price << ".\n";
         }
 
     } else if (order.side == Side::SELL) {
@@ -106,15 +111,16 @@ ExecutionResult OrderBook::executeOrder(Order order) {
             auto& bestBidOrders = bestBidIt->second; //pointer to the real list of orders so we can modify it directly
 
             while (order.quantity > 0 && !bestBidOrders.empty()){
-                Order& restingOrder = bestBidOrders.front(); // Get the first order in the list
-
+                Node* restingNode = bestBidOrders.front();
+                Order& restingOrder = restingNode->order; // Get the first order in the list
+                matchIterations++; // Increment the match iterations for each match attempt
                 if (order.quantity < restingOrder.quantity) {
                     restingOrder.quantity -= order.quantity;
                     order.quantity = 0;
                 } else {
                     order.quantity -= restingOrder.quantity;
                     bidOrderLookup.erase(restingOrder.id); // Remove from lookup
-                    bestBidOrders.pop_front(); // Remove the order from the list
+                    bestBidOrders.erase(restingNode); // Remove the order from the list
                 }
             }
 
@@ -125,12 +131,12 @@ ExecutionResult OrderBook::executeOrder(Order order) {
         }
 
         if (order.quantity > 0) {
-            std::cout << "Not enough liquidity to execute the order. Setting up an ask for the remaining quantity of " << order.quantity << " shares @ " << order.price << ".\n";
+            //std::cout << "Not enough liquidity to execute the order. Setting up an ask for the remaining quantity of " << order.quantity << " shares @ " << order.price << ".\n";
             newID = addOrder(order); // Not enough liquidity to execute the order
             restedInBook = true;
         } else {
-            std::cout << "Order fully filled: " << (order.side == Side::BUY ? "BUY" : "SELL")
-               << " " << originalQuantity << " @ " << order.price << ".\n";
+            //std::cout << "Order fully filled: " << (order.side == Side::BUY ? "BUY" : "SELL")
+               //<< " " << originalQuantity << " @ " << order.price << ".\n";
         }
     }
 
@@ -144,17 +150,17 @@ ExecutionResult OrderBook::executeOrder(Order order) {
         originalQuantity - order.quantity, //filled quantity
         order.quantity, // remaining quantity
         restedInBook,
-        restedInBook ? newID : 0 // resting order ID if any, 0 if none
-
+        restedInBook ? newID : 0, // resting order ID if any, 0 if none
+        matchIterations // number of iterations it took to match the order
 
     };
 }
 
-void OrderBook::printOrderBook() const {
+/*void OrderBook::printOrderBook() const {
     std::cout << "Order Book:\n";
     std::cout << "Bids:\n";
     for (const auto& [price, orders] : bids) {
-        for (const auto& order : orders) {
+        for (const auto& order : PriceLevelList) {
             std::cout << "ID: " << order.id << ", Quantity: " << order.quantity << ", Price: " << price << "\n";
         }
     }
@@ -165,7 +171,7 @@ void OrderBook::printOrderBook() const {
             std::cout << "ID: " << order.id << ", Quantity: " << order.quantity << ", Price: " << price << "\n";
         }
     }
-}
+} */
 
 void OrderBook::printStatistics() const {
     std::cout << "\n=== Order Book Statistics ===\n";
